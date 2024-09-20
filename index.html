@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>복권 번호 생성기</title>
+    <title>이번주 당첨 번호생성기</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -88,6 +88,7 @@
         #pensionGames {
             margin-left: 10px;
             font-size: 16px;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -109,7 +110,7 @@
                 </select>
             </label>
         </div>
-        <button id="generateBtn">번호 생성</button>
+        <button id="generateBtn">1등 가즈아!</button>
     </div>
     <div class="container">
         <div id="numbersList"></div>
@@ -186,6 +187,7 @@
                     numberDiv.className = 'number';
                     numberDiv.style.backgroundColor = '#FFFFFF';
                     numberDiv.style.color = 'black';
+                    groupDiv.style.fontWeight = 'bold';
                     numberDiv.textContent = num;
                     gameContainer.appendChild(numberDiv);
                 });

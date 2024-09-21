@@ -67,6 +67,10 @@
             align-items: center;
             margin: 5px;
             font-weight: bold;
+            font-size: 24px; /* 모든 숫자의 폰트 크기 증가 */
+        }
+        .pension-number {
+            font-size: 24px; /* 연금복권 숫자 폰트 크기 증가 */
         }
         .lottery-type {
             margin-bottom: 20px;
@@ -176,7 +180,7 @@
                 gameContainer.className = 'number-container';
                 
                 const groupDiv = document.createElement('div');
-                groupDiv.className = 'number';
+                groupDiv.className = 'number pension-number'; // pension-number 클래스 추가
                 groupDiv.style.backgroundColor = '#FFD700';
                 groupDiv.style.color = 'black';
                 groupDiv.textContent = result.group;
@@ -184,7 +188,7 @@
 
                 result.numbers.forEach(num => {
                     const numberDiv = document.createElement('div');
-                    numberDiv.className = 'number';
+                    numberDiv.className = 'number pension-number'; // pension-number 클래스 추가
                     numberDiv.style.backgroundColor = '#FFFFFF';
                     numberDiv.style.color = 'black';
                     groupDiv.style.fontWeight = 'bold';

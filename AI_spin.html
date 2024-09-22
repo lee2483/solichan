@@ -111,30 +111,46 @@
 
             camera.position.z = 5;
 
-            // 마우스 이벤트 리스너 추가
-            document.addEventListener('mousedown', onMouseDown, false);
-            document.addEventListener('mousemove', onMouseMove, false);
-            document.addEventListener('mouseup', onMouseUp, false);
+            // 마우스 및 터치 이벤트 리스너 추가
+            document.addEventListener('mousedown', onPointerDown, false);
+            document.addEventListener('mousemove', onPointerMove, false);
+            document.addEventListener('mouseup', onPointerUp, false);
+            document.addEventListener('touchstart', onPointerDown, false);
+            document.addEventListener('touchmove', onPointerMove, false);
+            document.addEventListener('touchend', onPointerUp, false);
 
             window.addEventListener('resize', onWindowResize, false);
         }
 
-        function onMouseDown(event) {
+        function onPointerDown(event) {
             isDragging = true;
-            lastMouseX = event.clientX;
-            lastMouseY = event.clientY;
-        }
-
-        function onMouseMove(event) {
-            if (isDragging) {
-                mouseX = event.clientX - lastMouseX;
-                mouseY = event.clientY - lastMouseY;
+            if (event.type === "touchstart") {
+                lastMouseX = event.touches[0].clientX;
+                lastMouseY = event.touches[0].clientY;
+            } else {
                 lastMouseX = event.clientX;
                 lastMouseY = event.clientY;
             }
         }
 
-        function onMouseUp() {
+        function onPointerMove(event) {
+            if (isDragging) {
+                let clientX, clientY;
+                if (event.type === "touchmove") {
+                    clientX = event.touches[0].clientX;
+                    clientY = event.touches[0].clientY;
+                } else {
+                    clientX = event.clientX;
+                    clientY = event.clientY;
+                }
+                mouseX = clientX - lastMouseX;
+                mouseY = clientY - lastMouseY;
+                lastMouseX = clientX;
+                lastMouseY = clientY;
+            }
+        }
+
+        function onPointerUp() {
             isDragging = false;
         }
 

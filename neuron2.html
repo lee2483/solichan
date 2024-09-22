@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>반응형 신경망 애니메이션</title>
+    <link href="https://fonts.cdnfonts.com/css/ds-digital" rel="stylesheet">
+    <style>
+        body { margin: 0; background: black; overflow: hidden; }
+        canvas { display: block; }
+        #digitalClock {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'DS-Digital', monospace;
+            font-size: 14px;
+            color: #cccccc;
+            letter-spacing: -0.5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 260px;
+        }
+        #digitalClock span {
+            display: inline-block;
+            text-align: center;
+        }
+        #digitalClock #year { width: 36px; }
+        #digitalClock #month,
+        #digitalClock #day,
+        #digitalClock #hours,
+        #digitalClock #minutes,
+        #digitalClock #seconds { 
+            width: 18px; 
+        }
+        #digitalClock #milliseconds { 
+            width: 16px;
+        }
+        #digitalClock .colon,
+        #digitalClock .dot { 
+            width: 4px;
+        }
+        #copyright {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Arial', sans-serif;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            width: 100%;
+        }
+        #copyright span {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="digitalClock">
+        <span id="year"></span>
+        <span class="colon">:</span>
+        <span id="month"></span>
+        <span class="colon">:</span>
+        <span id="day"></span>
+        <span class="colon">:</span>
+        <span id="hours"></span>
+        <span class="colon">:</span>
+        <span id="minutes"></span>
+        <span class="colon">:</span>
+        <span id="seconds"></span>
+        <span class="dot">.</span>
+        <span id="milliseconds"></span>
+    </div>
+    <div id="copyright">Copyright 2024. <span>solichan</span> All rights reserved.</div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        function calculateMaxNeurons() {
+            if (window.innerWidth < 768) {
+                return 500; // 모바일
+            } else if (window.innerWidth < 1024) {
+                return 1000; // 태블릿
+            } else {
+                return 2000; // 데스크탑
+            }
+        }
+
+        let maxNeurons = calculateMaxNeurons();
+        const connectionDistance = 300;
+
+        const neurons = [];
+
+        class Neuron {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.radius = 1 + Math.random() * 1.5;
+                this.color = this.getRandomGray();
+                this.opacity = 0;
+                this.fadeSpeed = 0.002 + Math.random() * 0.005;
+                this.fadeIn = true;
+                this.vx = (Math.random() - 0.5) * 0.1;
+                this.vy = (Math.random() - 0.5) * 0.1;
+                this.lifespan = 2000 + Math.random() * 4000; // 2-6초 수명
+                this.birth = Date.now();
+            }
+
+            getRandomGray() {
+                const value = Math.floor(Math.random() * 155) + 100;
+                return `rgb(${value}, ${value}, ${value})`;
+            }
+
+            update() {
+                const age = Date.now() - this.birth;
+                if (age > this.lifespan) {
+                    this.fadeIn = false;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+
+                if (this.fadeIn) {
+                    this.opacity += this.fadeSpeed;
+                    if (this.opacity >= 1) {
+                        this.opacity = 1;
+                    }
+                } else {
+                    this.opacity -= this.fadeSpeed;
+                    if (this.opacity <= 0) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color.replace('rgb', 'rgba').replace(')', `, ${this.opacity})`);
+                ctx.fill();
+            }
+        }
+
+        function drawConnections() {
+            ctx.lineWidth = 1;
+            for (let i = 0; i < neurons.length; i++) {
+                for (let j = i + 1; j < neurons.length; j++) {
+                    const dx = neurons[i].x - neurons[j].x;
+                    const dy = neurons[i].y - neurons[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < connectionDistance) {
+                        const opacity = (1 - distance / connectionDistance) * 0.15 * 
+                                        Math.min(neurons[i].opacity, neurons[j].opacity);
+                        ctx.beginPath();
+                        ctx.moveTo(neurons[i].x, neurons[i].y);
+                        ctx.lineTo(neurons[j].x, neurons[j].y);
+                        ctx.strokeStyle = `rgba(150, 150, 150, ${opacity})`;
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (neurons.length < maxNeurons) {
+                neurons.push(new Neuron());
+            }
+
+            drawConnections();
+
+            for (let i = neurons.length - 1; i >= 0; i--) {
+                if (!neurons[i].update()) {
+                    neurons.splice(i, 1);
+                } else {
+                    neurons[i].draw();
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            maxNeurons = calculateMaxNeurons();
+        });
+
+        function updateClock() {
+            const now = new Date();
+            const year = String(now.getFullYear());
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const milliseconds = String(now.getMilliseconds()).padStart(3, '0').slice(0, 2);
+            
+            document.getElementById('year').textContent = year;
+            document.getElementById('month').textContent = month;
+            document.getElementById('day').textContent = day;
+            document.getElementById('hours').textContent = hours;
+            document.getElementById('minutes').textContent = minutes;
+            document.getElementById('seconds').textContent = seconds;
+            document.getElementById('milliseconds').textContent = milliseconds;
+        }
+
+        setInterval(updateClock, 10);
+        updateClock();
+    </script>
+</body>
+</html>

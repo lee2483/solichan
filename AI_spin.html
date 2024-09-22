@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D 회전하는 달</title>
+    <title>3D 회전하는 AI</title>
     <style>
         body {
             margin: 0;
@@ -18,7 +18,7 @@
     <link href="https://fonts.cdnfonts.com/css/ds-digital" rel="stylesheet">
 </head>
 <body>
-    <canvas id="moonCanvas"></canvas>
+    <canvas id="aiCanvas"></canvas>
     
     <!-- 디지털 시계 추가 -->
     <div id="digitalClock">
@@ -44,33 +44,103 @@
     <div id="copyright">Copyright 2024. <span>solichan</span> All rights reserved.</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/loaders/FontLoader.js"></script>
+    <script src="https://threejs.org/examples/js/geometries/TextGeometry.js"></script>
     <script>
-        let scene, camera, renderer, sphere;
+        let scene, camera, renderer, aiText;
+        let mouseX = 0, mouseY = 0;
+        let lastMouseX = 0, lastMouseY = 0;
+        let isDragging = false;
+        let rotationSpeed = 0.005;
 
         function init() {
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer();
+            renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);  // 배경을 투명하게 설정
             document.body.appendChild(renderer.domElement);
 
-            const geometry = new THREE.SphereGeometry(1, 32, 32);
-            const textureLoader = new THREE.TextureLoader();
-            const texture = textureLoader.load('https://s3-us-west-2.amazonaws.com/s.cdpn.io/17271/lroc_color_poles_1k.jpg');
-            const material = new THREE.MeshPhongMaterial({ map: texture });
-            sphere = new THREE.Mesh(geometry, material);
-            scene.add(sphere);
+            // 환경 맵 로드 (반사 효과를 위해 유지)
+            const cubeTextureLoader = new THREE.CubeTextureLoader();
+            const envMap = cubeTextureLoader.load([
+                'https://threejs.org/examples/textures/cube/SwedishRoyalCastle/px.jpg',
+                'https://threejs.org/examples/textures/cube/SwedishRoyalCastle/nx.jpg',
+                'https://threejs.org/examples/textures/cube/SwedishRoyalCastle/py.jpg',
+                'https://threejs.org/examples/textures/cube/SwedishRoyalCastle/ny.jpg',
+                'https://threejs.org/examples/textures/cube/SwedishRoyalCastle/pz.jpg',
+                'https://threejs.org/examples/textures/cube/SwedishRoyalCastle/nz.jpg'
+            ]);
 
-            const light = new THREE.PointLight(0xffffff, 1, 100);
-            light.position.set(10, 0, 10);
-            scene.add(light);
+            // 메탈 재질 생성
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x888888,
+                metalness: 1.0,
+                roughness: 0.2,
+                envMap: envMap,
+                envMapIntensity: 1.0
+            });
 
-            camera.position.z = 3;
+            // 조명 설정
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+
+            // 3D 텍스트 생성
+            const loader = new THREE.FontLoader();
+            loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', function(font) {
+                const textGeometry = new THREE.TextGeometry('AI', {
+                    font: font,
+                    size: 1,
+                    height: 0.2,
+                    curveSegments: 12,
+                    bevelEnabled: true,
+                    bevelThickness: 0.03,
+                    bevelSize: 0.02,
+                    bevelOffset: 0,
+                    bevelSegments: 5
+                });
+
+                aiText = new THREE.Mesh(textGeometry, material);
+                textGeometry.center();
+                scene.add(aiText);
+            });
+
+            camera.position.z = 5;
+
+            // 마우스 이벤트 리스너 추가
+            document.addEventListener('mousedown', onMouseDown, false);
+            document.addEventListener('mousemove', onMouseMove, false);
+            document.addEventListener('mouseup', onMouseUp, false);
 
             window.addEventListener('resize', onWindowResize, false);
         }
 
+        function onMouseDown(event) {
+            isDragging = true;
+            lastMouseX = event.clientX;
+            lastMouseY = event.clientY;
+        }
+
+        function onMouseMove(event) {
+            if (isDragging) {
+                mouseX = event.clientX - lastMouseX;
+                mouseY = event.clientY - lastMouseY;
+                lastMouseX = event.clientX;
+                lastMouseY = event.clientY;
+            }
+        }
+
+        function onMouseUp() {
+            isDragging = false;
+        }
+
         function onWindowResize() {
+            windowHalfX = window.innerWidth / 2;
+            windowHalfY = window.innerHeight / 2;
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -78,7 +148,20 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            sphere.rotation.y += 0.0012; // 회전 속도를 반으로 줄임
+            render();
+        }
+
+        function render() {
+            if (aiText) {
+                if (isDragging) {
+                    // 마우스 드래그에 따라 'AI' 텍스트 회전
+                    aiText.rotation.y += mouseX * 0.005;
+                    aiText.rotation.x += mouseY * 0.005;  // 부호를 변경했습니다
+                } else {
+                    // 자동 회전
+                    aiText.rotation.y += rotationSpeed;
+                }
+            }
             renderer.render(scene, camera);
         }
 
@@ -122,7 +205,7 @@
             background-color: #000;
         }
 
-        #moonCanvas {
+        #aiCanvas {
             position: absolute;
         }
 

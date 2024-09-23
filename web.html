@@ -110,11 +110,11 @@
                 // 디바이스 유형에 따른 속도 조정
                 let speedMultiplier;
                 if (window.innerWidth < 768) {
-                    speedMultiplier = 0.4; // 모바일
+                    speedMultiplier = 0.3; // 모바일
                 } else if (window.innerWidth < 1024) {
-                    speedMultiplier = 0.7; // 태블릿
+                    speedMultiplier = 0.55; // 태블릿
                 } else {
-                    speedMultiplier = 1.0; // 데스크탑
+                    speedMultiplier = 0.8; // 데스크탑
                 }
                 
                 this.vx = (Math.random() - 0.5) * speedMultiplier;

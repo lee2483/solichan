@@ -159,11 +159,13 @@
         /* ===== 좌측 상단 천체 네비게이션 ===== */
         #bodyNav {
             position: absolute;
-            top: 10px;
+            bottom: 44px; /* copyright 라인 위 */
             left: 20px;
             z-index: 2;
             display: flex;
+            flex-wrap: wrap; /* 좁은 화면에서는 줄바꿈 */
             gap: 14px;
+            max-width: calc(100% - 40px);
             font-family: 'Orbitron', 'Malgun Gothic', sans-serif;
         }
         .navItem {
@@ -344,8 +346,8 @@
                 this.opacity = 0;
                 this.fadeSpeed = 0.002 + Math.random() * 0.005;
                 this.fadeIn = true;
-                this.vx = (Math.random() - 0.5) * 0.1;
-                this.vy = (Math.random() - 0.5) * 0.1;
+                this.vx = (Math.random() - 0.5) * 0.03;
+                this.vy = (Math.random() - 0.5) * 0.03;
                 this.lifespan = 2000 + Math.random() * 4000; // 2-6초 수명
                 this.birth = Date.now();
             }
@@ -389,27 +391,6 @@
             }
         }
 
-        function drawConnections() {
-            ctx.lineWidth = 1;
-            for (let i = 0; i < neurons.length; i++) {
-                for (let j = i + 1; j < neurons.length; j++) {
-                    const dx = neurons[i].x - neurons[j].x;
-                    const dy = neurons[i].y - neurons[j].y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-
-                    if (distance < connectionDistance) {
-                        const opacity = (1 - distance / connectionDistance) * 0.15 *
-                                        Math.min(neurons[i].opacity, neurons[j].opacity);
-                        ctx.beginPath();
-                        ctx.moveTo(neurons[i].x, neurons[i].y);
-                        ctx.lineTo(neurons[j].x, neurons[j].y);
-                        ctx.strokeStyle = `rgba(150, 150, 150, ${opacity})`;
-                        ctx.stroke();
-                    }
-                }
-            }
-        }
-
         function animateNeurons() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -423,8 +404,6 @@
             if (Math.random() < spawnRate && neurons.length < maxNeurons) {
                 neurons.push(new Neuron());
             }
-
-            drawConnections();
 
             for (let i = neurons.length - 1; i >= 0; i--) {
                 if (!neurons[i].update()) {
@@ -1014,14 +993,50 @@
             renderer.domElement.classList.remove('dragging');
         });
 
-        // 모바일 스와이프 지원
-        let touchStartY = null;
-        window.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
+        // 모바일: 세로 스와이프 = 천체 전환, 가로 드래그 = 천체 회전
+        let touchStartX = null, touchStartY = null;
+        let touchLastX = 0, touchLastY = 0;
+        let touchMode = null; // 'drag'(회전) 또는 'swipe'(전환)
+
+        window.addEventListener('touchstart', (e) => {
+            if (e.target.closest('#infoPanel') || e.target.closest('#bodyNav')) return;
+            touchStartX = touchLastX = e.touches[0].clientX;
+            touchStartY = touchLastY = e.touches[0].clientY;
+            touchMode = null;
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (touchStartX === null) return;
+            const x = e.touches[0].clientX;
+            const y = e.touches[0].clientY;
+
+            // 첫 움직임의 지배적인 방향으로 모드 결정
+            if (touchMode === null) {
+                const dx0 = Math.abs(x - touchStartX);
+                const dy0 = Math.abs(y - touchStartY);
+                if (Math.max(dx0, dy0) > 10) {
+                    touchMode = dx0 > dy0 ? 'drag' : 'swipe';
+                    if (touchMode === 'drag') dragging = true; // 자전 정지
+                }
+            }
+
+            if (touchMode === 'drag') {
+                const item = meshes[wrapIndex(targetIndex)];
+                item.sphere.rotation.y += (x - touchLastX) * 0.005;
+                item.group.rotation.x = Math.max(-0.6, Math.min(0.6, item.group.rotation.x + (y - touchLastY) * 0.003));
+            }
+            touchLastX = x;
+            touchLastY = y;
+        }, { passive: true });
+
         window.addEventListener('touchend', (e) => {
-            if (touchStartY === null) return;
-            const dy = touchStartY - e.changedTouches[0].clientY;
-            if (Math.abs(dy) > 50) goTo(targetIndex + (dy > 0 ? 1 : -1));
-            touchStartY = null;
+            if (touchStartY !== null && touchMode !== 'drag') {
+                const dy = touchStartY - e.changedTouches[0].clientY;
+                if (Math.abs(dy) > 50) goTo(targetIndex + (dy > 0 ? 1 : -1));
+            }
+            dragging = false;
+            touchStartX = touchStartY = null;
+            touchMode = null;
         }, { passive: true });
 
         function animateSpace() {
